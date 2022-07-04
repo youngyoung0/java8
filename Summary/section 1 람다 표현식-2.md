@@ -1,0 +1,158 @@
+# 람다 표현식
+
+람다
+
+- (인자 리스트) → {바디}
+
+인자 리스트
+
+- 인자가 없을 때: ()
+    
+    ```java
+    Supplier<Integer> get10 = () -> 10;
+    ```
+    
+- 인자가 한계일 때: (one) 또는 one
+- 인자가 여러개 일때: (one, two)
+    
+    ```java
+    BinaryOperator<Integer> sum = (a, b) -> a + b;
+    ```
+    
+- 인자의 타입은 생략 가능, 컴파일러가 추론(infer) 하지만 명시할 수도 있다. (Integer one, Integer two)
+    
+    ```java
+    BinaryOperator<Integer> sum = (Integer a, Integer b) -> a + b;
+    ```
+    
+
+바디
+
+- 화살표 오른쪽에 함수 본문을 정의한다.
+- 여러 줄인 경우에 { }를 사용해서 묶는다.
+- 한 줄인 경우에 생략 가능, return도 생략 가능.
+
+변수 캡처
+
+- 로컬 변수 캡처
+    - final이거나 effective final인 경우에만 참조할 수 있다.
+    - 그렇지 않을 경우 concurrency 문제가 생길 수 있어서 컴파일가 방지한다.
+- effective final
+    - 이것도 역시 자바 8부터 지원하는 기능으로 final인 변수
+    - final 키워드 사용하지 않은 변수를 익명 클래스 구현체 또는 람다에서 참조할 수 있다.
+- 익명 클래스 구현체와 달리 ‘쉐도윙' 하지 않는다.
+    - 익명 클래스는 새로 스콥을 만들지만, 람다는 람다를 감싸고 있는 스콥과 같다.
+    
+    ```java
+    private void run(){
+            int baseNumber = 10;
+    
+            // 로컬 클래스
+            class LocalClass{
+                void printBaseNumber(){
+                    int baseNumber = 11;
+                    System.out.println(baseNumber); // 11
+                }
+            }
+    
+            // 익명 클래스
+            Consumer<Integer> integerConsumer = new Consumer<Integer>() {
+                @Override
+                public void accept(Integer integer) {
+                    System.out.println(baseNumber);
+                }
+            };
+    
+            // 람다 -> 다른 클래스와 다른점 : 쉐도잉
+            // 쉐도잉 : 이름이 같은 변수는 가려짐
+            // 같은 변수명을 사용할수 없다.
+            // 람다 : 람다가 속한 메소드와 같은 범위로 인식된다.
+            // 로컬/익명 클래스 : 로컬/익명 클래스와 속한 메소드의 범위가 다르다.
+            IntConsumer printInt = (i) -> {
+                System.out.println(i + baseNumber);
+            };
+    
+            printInt.accept(10);
+        }
+    ```
+    
+
+# 메소드 레퍼런스
+
+람다가 하는 일이 기존 메서드 또는 생성자를 호출하는 거라면, 메소드 레퍼런스를 사용해서 매우 간결하게 표현할 수 있다.
+
+메소드 참조하는 방법
+
+| 스태틱 메소드 참조 | 타입::스태틱 메서드 |
+| --- | --- |
+| 특정 객체의 인스턴스 메서드 참조 | 객체 레퍼런스 :: 인스턴스 메서드 |
+| 임의 객체의 인스턴스 메서드 참조 | 타입::인스턴스 메서드 |
+| 생성자 참조 | 타입::new |
+- 메서드 또는 생성자의 매개변수로 람다의 입력값을 받는다.
+- 리턴값 또는 생성한 객체는 람다의 리턴값이다.
+
+```java
+public class Greeting {
+    private String name;
+
+    public Greeting(){
+    }
+
+    public Greeting(String name){
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String hello(String name){
+        return "hello " + name;
+    }
+
+    public static String hi(String name){
+        return "hi " + name;
+    }
+}
+public class App {
+
+    public static void main(String[] args) {
+        UnaryOperator<String> hi = Greeting::hi;
+
+        Greeting greeting = new Greeting();
+        UnaryOperator<String> hello = greeting::hello;
+        System.out.println(hello.apply("taylor"));
+
+        Supplier<Greeting> newGreeting = Greeting::new;
+        newGreeting.get();
+
+        Function<String, Greeting> taylorGreeting = Greeting::new; // 문자열을 받는 생성장를 참조
+        Greeting taylor = taylorGreeting.apply("taylor");
+        System.out.println(taylor.getName());
+
+        Supplier<Greeting> theNewGreeting = Greeting::new; // 문자열을 받지 않는 생성자를 참조
+
+        // 임의 객체의 인스턴스 메서드 참조
+        String[] names = {"taylor", "chan", "john", "aaron"};
+        Arrays.sort(names, String::compareToIgnoreCase);
+				System.out.println(Arrays.toString(names));
+    }
+
+}
+```
+
+# 인터페이스 기본 메서드와 스태틱 메서드
+
+기본 메서드 (Default Methods)
+
+- 인터페이스에 메소드 선언이 아니라 구현체를 제공하는 방법
+- 해당 인터페이스를 구현한 클래스를 깨트리지 않고 새 기능을 추가할 수 있다.
+- 기본 메서드는 구현체가 모르게 추가된 기능으로 그만큼 리스크가 있다.
+- Object가 제공하는 기능 (equals, hasCode)는 기본 메서드로 제공할 수 없다.
+- 본인이 수정할 수 있는 인터페이스에만 기본 메서드를 제공할 수 있다.
+- 인터페이스를 상속받는 인터페이스에서 다시 추상 메서드로 변경할 수 있다.
+- 인터페이스 구현체가 재덩의 할 수도 있다.
+
+스태틱 메서드
+
+- 해당 타입 관련 헬터 또는 유틸리티 메서드를 제공할 때 인터페이스에 스태틱 메서드를 제공할 수 있다.

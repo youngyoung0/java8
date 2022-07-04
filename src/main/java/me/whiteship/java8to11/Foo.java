@@ -29,8 +29,5 @@ public class Foo {
         UnaryOperator<Integer> plus11 = (i) -> i+11;
         UnaryOperator<Integer> multiply3 = (i) -> i*3;
         System.out.println(plus11.compose(multiply3).apply(2)); //17
-
-        // BinaryOperator
-        
     }
 }
